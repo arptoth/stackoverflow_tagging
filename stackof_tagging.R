@@ -7,6 +7,28 @@ library(data.table)
 library(mlr)
 library(checkmate)
 
+
+# Nexessary functions to check valid label names
+isValidName <- function(string) {
+  grepl("^([[:alpha:]]|[.][._[:alpha:]])[._[:alnum:]]*$", string)
+}
+
+isValidAndUnreservedName <- function(string) {
+  make.names(string) == string
+}
+
+testValidity <- function(string) {
+  valid <- isValidName(string)
+  unreserved <- isValidAndUnreservedName(string)
+  reserved <- (valid & ! unreserved)
+  list("Valid"=valid,
+       "Unreserved"=unreserved,
+       "Reserved"=reserved)
+}
+
+
+
+
 # Load questions and tags by fread
 questions <- fread("~/Downloads/questions.csv")
 tags <- fread("~/Downloads/question_tags.csv")
@@ -65,83 +87,68 @@ colnames(datamin) <- gsub("function", "f_unction", colnames(datamin))
 colnames(datamin) <- gsub("3d", "threed", colnames(datamin))
 
 
+# Convert datetimes to numeric valuse (requeried to makeMultilabelTask)
+datamin$CreationDate <- as.numeric(as.POSIXct(datamin$CreationDate))
+datamin$ClosedDate <- as.numeric(as.POSIXct(datamin$ClosedDate))
+datamin$DeletionDate <- as.numeric(as.POSIXct(datamin$DeletionDate))
 
 
-datamin$DeletionDate <- NULL
-datamin$DeletionDate <- NULL
-datamin$DeletionDate <- NULL
-
-duplicated(labels)
+# Convert zeros and ones to logical true and falses
+datamin[8:ncol(datamin)] <- lapply(datamin[8:ncol(datamin)], as.logical)
 
 
-names(datamin) 
+
+#datamin$CreationDate <- NULL
+#datamin$ClosedDate <- NULL
+#datamin$DeletionDate <- NULL
 
 
-labels
-
-gsub("[[:punct:]]", "", labels)
 
 
-task = makeMultilabelTask(id = "multi", data = datamin, target = colnames(datamin[8:ncol(datamin)]))
+# Craetea Multilabel classifier task
+task = makeMultilabelTask(id = "multi", data = datamin[1:1000], target = colnames(datamin[8:ncol(datamin)]))
 task
 
 
+# Create binary learner
+lrn.br = makeLearner("classif.rpart", predict.type = "prob") 
+lrn.br = makeMultilabelBinaryRelevanceWrapper(lrn.br) 
+lrn.br 
 
-lrn.br = makeLearner("classif.rpart", predict.type = "prob")
-lrn.br = makeMultilabelBinaryRelevanceWrapper(lrn.br)
-lrn.br
 
-mod = train(lrn.br, task)
+mod = train(lrn.br, task) 
 mod
 
-pred = predict(mod, task = task, subset = 1:10)
-pred = predict(mod, newdata = datamin[1501:1600,])
+
+
+pred = predict(mod, task = task) 
+pred = predict(mod, newdata = datamin[1001:1100,]) 
 names(as.data.frame(pred))
 
 
-getPredictionResponse(pred)
+
+resp <- getPredictionResponse(pred)
+df <- as.data.frame(resp)
+df$python_2.6==T
+
+df_truth <- as.data.frame(getPredictionTruth(pred))
+df$arrays
+
 
 
 getPredictionSE(pred)
-getPredictionTruth(pred)
-getPredictionProbabilities(pred)
+
+glimpse(getPredictionProbabilities(pred))
+probs <- getPredictionProbabilities(pred)
+
+glimpse(as.data.frame(getPredictionResponse(pred)))
+
 performance(pred)
 listMeasures("multilabel")
 
 
-colnames(datamin[5:ncol(datamin)]) <- make.names(labels)
+
+getMultilabelBinaryPerformances(pred, measures = list(acc, mmce, auc))
+performance(pred)
 
 
-ifelse(datamin$require==1, T, F)
-
-for (i in names(datamin)) {
-  ifelse(datamin$i==1, T, F)
-}
-
-datamin[5:ncol(datamin)] <- lapply(datamin[5:ncol(datamin)], as.logical)
-
-
-for (year in c(2010,2011,2012,2013,2014,2015)){
-  print(paste("The year is", year))
-}
-
-
-
-
-
-isValidName <- function(string) {
-  grepl("^([[:alpha:]]|[.][._[:alpha:]])[._[:alnum:]]*$", string)
-}
-
-isValidAndUnreservedName <- function(string) {
-  make.names(string) == string
-}
-
-testValidity <- function(string) {
-  valid <- isValidName(string)
-  unreserved <- isValidAndUnreservedName(string)
-  reserved <- (valid & ! unreserved)
-  list("Valid"=valid,
-       "Unreserved"=unreserved,
-       "Reserved"=reserved)
-}

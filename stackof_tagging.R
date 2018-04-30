@@ -46,12 +46,25 @@ labels = colnames(datamin[8:ncol(datamin)])
 labels
 
 
+# Feature engineering
+# MLR makeMultilabelTask requires proper R naming convention
+# What are the invalid labels?
+colnames(datamin)[!isValidAndUnreservedName(colnames(datamin))]
 
-
-
-colnames(datamin) <- gsub("\\.|\\+|\\#", "", colnames(datamin))
+# Let's replace dash to underscore
 colnames(datamin) <- gsub("\\-", "_", colnames(datamin))
-colnames(datamin) <- gsub("[[:punct:]]", "", colnames(datamin))
+
+# Test again
+colnames(datamin)[!isValidAndUnreservedName(colnames(datamin))]
+
+# Clean more
+colnames(datamin) <- gsub("\\#", "sharp", colnames(datamin))
+colnames(datamin) <- gsub("\\+", "plus", colnames(datamin))
+colnames(datamin) <- gsub("64", "sixtyfour", colnames(datamin))
+colnames(datamin) <- gsub("function", "f_unction", colnames(datamin))
+colnames(datamin) <- gsub("3d", "threed", colnames(datamin))
+
+
 
 
 datamin$DeletionDate <- NULL
@@ -114,7 +127,7 @@ for (year in c(2010,2011,2012,2013,2014,2015)){
 
 
 
-colnames(datamin)[!isValidAndUnreservedName(colnames(datamin))]
+
 
 isValidName <- function(string) {
   grepl("^([[:alpha:]]|[.][._[:alpha:]])[._[:alnum:]]*$", string)
